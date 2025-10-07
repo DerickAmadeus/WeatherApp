@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App - Multi City</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'bounce-in': 'bounceIn 0.6s ease-out',
+                        'float': 'float 20s ease-in-out infinite',
+                        'float-slow': 'float 30s ease-in-out infinite',
+                        'float-slower': 'float 40s ease-in-out infinite'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(100px, -50px); }
+            50% { transform: translate(200px, 0); }
+            75% { transform: translate(100px, 50px); }
+        }
+        
+        .cloud {
+            position: absolute;
+            background: white;
+            opacity: 0.15;
+            border-radius: 100px;
+            animation: float ease-in-out infinite;
+        }
+        
+        .cloud::before,
+        .cloud::after {
+            content: '';
+            position: absolute;
+            background: white;
+            border-radius: 100px;
+        }
+        
+        .cloud-1 {
+            width: 100px;
+            height: 40px;
+            top: 10%;
+            left: 10%;
+            animation-duration: 25s;
+        }
+        
+        .cloud-1::before {
+            width: 50px;
+            height: 50px;
+            top: -25px;
+            left: 10px;
+        }
+        
+        .cloud-1::after {
+            width: 60px;
+            height: 40px;
+            top: -15px;
+            right: 10px;
+        }
+        
+        .cloud-2 {
+            width: 120px;
+            height: 50px;
+            top: 25%;
+            right: 15%;
+            animation-duration: 35s;
+            animation-delay: -5s;
+        }
+        
+        .cloud-2::before {
+            width: 60px;
+            height: 60px;
+            top: -30px;
+            left: 15px;
+        }
+        
+        .cloud-2::after {
+            width: 70px;
+            height: 50px;
+            top: -20px;
+            right: 15px;
+        }
+        
+        .cloud-3 {
+            width: 80px;
+            height: 35px;
+            top: 50%;
+            left: 20%;
+            animation-duration: 30s;
+            animation-delay: -10s;
+        }
+        
+        .cloud-3::before {
+            width: 40px;
+            height: 40px;
+            top: -20px;
+            left: 10px;
+        }
+        
+        .cloud-3::after {
+            width: 50px;
+            height: 35px;
+            top: -15px;
+            right: 10px;
+        }
+        
+        .cloud-4 {
+            width: 140px;
+            height: 55px;
+            bottom: 20%;
+            right: 10%;
+            animation-duration: 40s;
+            animation-delay: -15s;
+        }
+        
+        .cloud-4::before {
+            width: 70px;
+            height: 70px;
+            top: -35px;
+            left: 20px;
+        }
+        
+        .cloud-4::after {
+            width: 80px;
+            height: 55px;
+            top: -25px;
+            right: 20px;
+        }
+        
+        .cloud-5 {
+            width: 90px;
+            height: 40px;
+            bottom: 35%;
+            left: 15%;
+            animation-duration: 28s;
+            animation-delay: -8s;
+        }
+        
+        .cloud-5::before {
+            width: 45px;
+            height: 45px;
+            top: -22px;
+            left: 12px;
+        }
+        
+        .cloud-5::after {
+            width: 55px;
+            height: 40px;
+            top: -18px;
+            right: 12px;
+        }
+        
+        #map {
+            height: 400px;
+            width: 100%;
+            border-radius: 1rem;
+            z-index: 1;
+        }
+        
+        @media (min-width: 768px) {
+            #map {
+                height: 100%;
+                min-height: 500px;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 min-h-screen relative">
+    <!-- Animated Clouds Background -->
+    <div class="cloud cloud-1"></div>
+    <div class="cloud cloud-2"></div>
+    <div class="cloud cloud-3"></div>
+    <div class="cloud cloud-4"></div>
+    <div class="cloud cloud-5"></div>
+    
+    <div class="container mx-auto px-4 py-6 max-w-6xl relative z-10">
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-white mb-2 animate-fade-in">
+                🌤️ Cuaca Tudei
+            </h1>
+            <p class="text-blue-100 text-base animate-fade-in">
+                Search weather for any city worldwide
+            </p>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="max-w-2xl mx-auto mb-6 animate-fade-in">
+            <form onsubmit="handleSearch(event)" class="mb-3">
+                <div class="flex gap-2">
+                    <input 
+                        type="text" 
+                        id="city-input" 
+                        placeholder="Enter city name..." 
+                        class="flex-1 px-4 py-2.5 rounded-full bg-white/20 backdrop-blur-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-white/50 text-sm"
+                    >
+                    <button 
+                        type="submit" 
+                        class="bg-white/30 hover:bg-white/40 transition-colors duration-200 px-5 py-2.5 rounded-full font-semibold text-white text-sm"
+                    >
+                        🔍 Search
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Quick Access Cities -->
+            <div class="flex flex-wrap gap-2 justify-center">
+                <button onclick="quickSearch('Bandung')" class="bg-white/20 hover:bg-white/30 transition-colors duration-200 px-3 py-1.5 rounded-full text-xs text-white">
+                    Bandung
+                </button>
+                <button onclick="quickSearch('Jakarta')" class="bg-white/20 hover:bg-white/30 transition-colors duration-200 px-3 py-1.5 rounded-full text-xs text-white">
+                    Jakarta
+                </button>
+                <button onclick="quickSearch('Kediri')" class="bg-white/20 hover:bg-white/30 transition-colors duration-200 px-3 py-1.5 rounded-full text-xs text-white">
+                    Kediri
+                </button>
+                <button onclick="quickSearch('Surabaya')" class="bg-white/20 hover:bg-white/30 transition-colors duration-200 px-3 py-1.5 rounded-full text-xs text-white">
+                    Surabaya
+                </button>
+                <button onclick="quickSearch('Tokyo')" class="bg-white/20 hover:bg-white/30 transition-colors duration-200 px-3 py-1.5 rounded-full text-xs text-white">
+                    Tokyo
+                </button>
+                <button onclick="quickSearch('London')" class="bg-white/20 hover:bg-white/30 transition-colors duration-200 px-3 py-1.5 rounded-full text-xs text-white">
+                    London
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="text-center">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+            <p class="text-white text-lg">Loading weather data...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error" class="hidden max-w-md mx-auto">
+            <div class="bg-red-500 text-white p-6 rounded-lg shadow-lg animate-bounce-in">
+                <div class="flex items-center mb-2">
+                    <span class="text-2xl mr-2">❌</span>
+                    <h3 class="text-xl font-semibold">Error</h3>
+                </div>
+                <p id="error-message" class="text-red-100"></p>
+            </div>
+        </div>
+
+        <!-- Weather Card -->
+        <div id="weather-card" class="hidden max-w-6xl mx-auto">
+            <div class="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-6 text-white animate-bounce-in">
+                <!-- City Name & Timezone -->
+                <div class="text-center mb-5 pb-4 border-b border-white/20">
+                    <h2 id="city-name" class="text-2xl font-bold mb-1"></h2>
+                    <p id="country" class="text-blue-100 text-sm mb-2"></p>
+                    <div class="flex items-center justify-center gap-4 text-xs text-blue-200">
+                        <span id="timezone" class="flex items-center gap-1">
+                            🌍 <span id="timezone-value"></span>
+                        </span>
+                        <span class="text-white/50">•</span>
+                        <span id="local-time" class="flex items-center gap-1">
+                            🕐 <span id="time-value"></span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Main Content: Weather Info (Left) + Map (Right) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-5">
+                    <!-- Left Column: Weather Information -->
+                    <div>
+                        <!-- Main Weather Info -->
+                        <div class="flex items-center justify-between mb-5">
+                            <div class="flex items-center gap-3">
+                                <img id="weather-icon" src="" alt="Weather icon" class="w-20 h-20">
+                                <div>
+                                    <div id="temperature" class="text-5xl font-bold"></div>
+                                    <div id="feels-like" class="text-sm text-blue-100 mt-1"></div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div id="description" class="text-lg capitalize font-medium"></div>
+                            </div>
+                        </div>
+
+                        <!-- Weather Details Grid -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-white/10 rounded-xl p-3 text-center">
+                                <div class="text-xl mb-1">💧</div>
+                                <div class="text-xs text-blue-100 mb-1">Humidity</div>
+                                <div id="humidity" class="font-bold text-sm"></div>
+                            </div>
+                            <div class="bg-white/10 rounded-xl p-3 text-center">
+                                <div class="text-xl mb-1">💨</div>
+                                <div class="text-xs text-blue-100 mb-1">Wind</div>
+                                <div id="wind-speed" class="font-bold text-sm"></div>
+                            </div>
+                            <div class="bg-white/10 rounded-xl p-3 text-center">
+                                <div class="text-xl mb-1">🌡️</div>
+                                <div class="text-xs text-blue-100 mb-1">Pressure</div>
+                                <div id="pressure" class="font-bold text-sm"></div>
+                            </div>
+                            <div class="bg-white/10 rounded-xl p-3 text-center">
+                                <div class="text-xl mb-1">👁️</div>
+                                <div class="text-xs text-blue-100 mb-1">Visibility</div>
+                                <div id="visibility" class="font-bold text-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Map -->
+                    <div>
+                        <div class="bg-white/10 rounded-xl p-3 h-full">
+                            <div class="text-sm text-blue-100 mb-2 font-semibold flex items-center gap-2">
+                                <span>📍</span>
+                                <span>Location Map</span>
+                            </div>
+                            <div id="map" class="rounded-lg overflow-hidden"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex items-center justify-between pt-4 border-t border-white/20">
+                    <p class="text-xs text-blue-200">
+                        Updated: <span id="last-updated" class="font-semibold"></span>
+                    </p>
+                    <button onclick="refreshCurrentCity()" class="bg-white/20 hover:bg-white/30 transition-colors duration-200 px-4 py-1.5 rounded-full font-semibold text-xs">
+                        🔄 Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="index.js"></script>
+</body>
+</html>
